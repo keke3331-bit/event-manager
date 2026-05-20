@@ -144,7 +144,7 @@ function renderDashboard() {
     .map(([id, e]) => ({ id, ...e }))
     .sort((a, b) => (a.startDate || a.date || '').localeCompare(b.startDate || b.date || ''));
 
-  const allTasks  = Object.values(cachedTasks);
+  const allTasks  = Object.entries(cachedTasks).map(([id, t]) => ({ id, ...t }));
   const overdue   = allTasks.filter(t => t.status !== '完了' && t.dueDate && t.dueDate < today).length;
   const done      = allTasks.filter(t => t.status === '完了').length;
   document.getElementById('stat-events').textContent    = events.length;
@@ -158,15 +158,14 @@ function renderDashboard() {
   }
 
   grid.innerHTML = events.map(ev => {
-    const tasks     = allTasks.filter(t => t.eventId === ev.id);
-    const total     = tasks.length;
-    const todoN     = tasks.filter(t => t.status === '未着手').length;
-    const wipN      = tasks.filter(t => t.status === '進行中').length;
-    const completed = tasks.filter(t => t.status === '完了').length;
-    const pct       = total > 0 ? Math.round(completed / total * 100) : 0;
-    const todoPct   = total > 0 ? todoN     / total * 100 : 0;
-    const wipPct    = total > 0 ? wipN      / total * 100 : 0;
-    const donePct   = total > 0 ? completed / total * 100 : 0;
+    const tasks         = allTasks.filter(t => t.eventId === ev.id);
+    const todoN         = tasks.filter(t => t.status === '未着手').length;
+    const wipN          = tasks.filter(t => t.status === '進行中').length;
+    const completed     = tasks.filter(t => t.status === '完了').length;
+    const eventRoots    = buildTree(tasks);
+    const eventProgress = eventRoots.length > 0
+      ? Math.round(eventRoots.reduce((s, r) => s + calcProgress(r), 0) / eventRoots.length)
+      : 0;
     const overdueN  = tasks.filter(t => t.status !== '完了' && t.dueDate && t.dueDate < today).length;
     const { dateDisplay, dayLabel, dayClass } = eventDayInfo(ev);
 
@@ -183,12 +182,10 @@ function renderDashboard() {
           </div>
         </div>
         <div class="event-card__progress">
-          <div class="progress-bar progress-bar--stacked">
-            <div class="pfill pfill--todo" style="width:${todoPct}%"></div>
-            <div class="pfill pfill--wip"  style="width:${wipPct}%"></div>
-            <div class="pfill pfill--done" style="width:${donePct}%"></div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${eventProgress}%"></div>
           </div>
-          <span class="progress-text">${pct}%</span>
+          <span class="progress-text">${eventProgress}%</span>
         </div>
         <div class="event-card__pchips">
           <span class="pchip pchip--todo">${todoN} 未着手</span>
@@ -317,14 +314,16 @@ function initEventDetail() {
     const parentId = document.getElementById('task-parent-id').value || '';
     if (!title) return;
 
+    const progressSel = document.getElementById('task-progress');
     const data = {
       eventId: currentEventId, level, parentId,
       title,
       category:  document.getElementById('task-category').value,
       assignees: Array.from(document.querySelectorAll('#task-assignees-picker .assignee-btn.selected')).map(b => b.dataset.name),
       dueDate:   document.getElementById('task-due').value,
-      status:   document.getElementById('task-status').value,
-      notes:    document.getElementById('task-notes').value.trim(),
+      status:    document.getElementById('task-status').value,
+      notes:     document.getElementById('task-notes').value.trim(),
+      ...(progressSel.disabled ? {} : { progress: parseInt(progressSel.value) }),
     };
     try {
       if (editId) {
@@ -381,6 +380,12 @@ function renderEventInfo() {
 }
 
 /* ─── Task tree rendering ─── */
+function calcProgress(task) {
+  if (!task.children || task.children.length === 0) return task.progress ?? 0;
+  const sum = task.children.reduce((s, c) => s + calcProgress(c), 0);
+  return Math.round(sum / task.children.length);
+}
+
 function buildTree(tasks) {
   const byId = {};
   tasks.forEach(t => { byId[t.id] = { ...t, children: [] }; });
@@ -426,6 +431,7 @@ function renderTaskBlock(task, level, today) {
   const childTotal = countAll(task);
   const childDone  = countDone(task);
   const nextLevel  = NEXT_LEVEL[level];
+  const progress   = calcProgress(task);
 
   const row = document.createElement('div');
   row.className = `task-row${isDone ? ' task-row--done' : ''}`;
@@ -441,6 +447,10 @@ function renderTaskBlock(task, level, today) {
       ${getAssignees(task).map(a => `<span class="task-meta-item">${a}</span>`).join('')}
       ${task.dueDate  ? `<span class="task-meta-item${overdue ? ' overdue-text' : ''}">${task.dueDate}</span>` : ''}
       ${childTotal > 0 ? `<span class="child-count">${childDone}/${childTotal}</span>` : ''}
+    </span>
+    <span class="task-progress">
+      <span class="task-progress-bar"><span class="task-progress-fill" style="width:${progress}%"></span></span>
+      <span class="task-progress-num">${progress}%</span>
     </span>
     <div class="task-actions">
       ${nextLevel ? `<button class="btn-add-child" data-level="${nextLevel}" data-parent-id="${task.id}">${ADD_LABEL[nextLevel]}</button>` : ''}
@@ -469,18 +479,19 @@ function renderTasks() {
   const assigneeF = document.getElementById('filter-assignee')?.value || '';
 
   const allList = Object.entries(cachedEventTasks).map(([id, t]) => ({ id, ...t }));
-  const total   = allList.length;
-  const todo    = allList.filter(t => t.status === '未着手').length;
-  const wip     = allList.filter(t => t.status === '進行中').length;
-  const done    = allList.filter(t => t.status === '完了').length;
-  const pct     = total > 0 ? Math.round(done / total * 100) : 0;
-  document.getElementById('pstat-todo').textContent     = todo;
-  document.getElementById('pstat-wip').textContent      = wip;
-  document.getElementById('pstat-done').textContent     = done;
-  document.getElementById('pfill-todo').style.width     = (total > 0 ? todo / total * 100 : 0) + '%';
-  document.getElementById('pfill-wip').style.width      = (total > 0 ? wip  / total * 100 : 0) + '%';
-  document.getElementById('pfill-done').style.width     = (total > 0 ? done / total * 100 : 0) + '%';
-  document.getElementById('progress-label').textContent = `${done}/${total} 完了（${pct}%）`;
+  const todo = allList.filter(t => t.status === '未着手').length;
+  const wip  = allList.filter(t => t.status === '進行中').length;
+  const done = allList.filter(t => t.status === '完了').length;
+  document.getElementById('pstat-todo').textContent = todo;
+  document.getElementById('pstat-wip').textContent  = wip;
+  document.getElementById('pstat-done').textContent = done;
+
+  const roots = buildTree(allList);
+  const overallProgress = roots.length > 0
+    ? Math.round(roots.reduce((s, r) => s + calcProgress(r), 0) / roots.length)
+    : 0;
+  document.getElementById('progress-fill').style.width  = overallProgress + '%';
+  document.getElementById('progress-label').textContent = `全体進捗 ${overallProgress}%`;
 
   treeEl.innerHTML = '';
 
@@ -528,6 +539,21 @@ function openTaskModal(id = '', data = {}, level = 'large', parentId = '') {
   document.querySelectorAll('#task-assignees-picker .assignee-btn').forEach(btn => {
     btn.classList.toggle('selected', selectedAssignees.includes(btn.dataset.name));
   });
+
+  const hasChildren = id ? Object.values(cachedEventTasks).some(t => t.parentId === id) : false;
+  const progressGroup = document.getElementById('task-progress-group');
+  const progressSel   = document.getElementById('task-progress');
+  const progressLabel = progressGroup?.querySelector('label');
+  if (hasChildren) {
+    progressSel.disabled = true;
+    progressGroup.style.opacity = '0.55';
+    if (progressLabel) progressLabel.textContent = '進捗（下位タスクから自動計算）';
+  } else {
+    progressSel.disabled = false;
+    progressGroup.style.opacity = '1';
+    if (progressLabel) progressLabel.textContent = '進捗';
+    progressSel.value = data.progress ?? 0;
+  }
   document.getElementById('task-due').value        = data.dueDate  || '';
   document.getElementById('task-status').value     = data.status   || '未着手';
   document.getElementById('task-notes').value      = data.notes    || '';

@@ -41,10 +41,8 @@
         <div class="pstat pstat--done"><span class="pstat-num" id="pstat-done">-</span><span class="pstat-lbl">完了</span></div>
       </div>
       <div class="progress-wrap">
-        <div class="progress-bar progress-bar--stacked progress-bar--lg">
-          <div class="pfill pfill--todo" id="pfill-todo"></div>
-          <div class="pfill pfill--wip"  id="pfill-wip"></div>
-          <div class="pfill pfill--done" id="pfill-done"></div>
+        <div class="progress-bar progress-bar--lg">
+          <div class="progress-fill" id="progress-fill"></div>
         </div>
         <span class="progress-label" id="progress-label">-</span>
       </div>
@@ -78,7 +76,7 @@
 
 </main>
 
-<button class="fab" id="fab-new-task">+ 親タスク追加</button>
+<button class="fab" id="fab-new-task">+ タスクの追加</button>
 
 <!-- タスク追加/編集モーダル -->
 <div class="modal-overlay" id="task-modal">
@@ -118,14 +116,30 @@
         </div>
       </div>
       <div class="form-row">
-        <div class="form-group">
-          <label>担当者 <span class="label-note">（複数選択可）</span></label>
-          <div id="task-assignees-picker" class="assignees-picker"></div>
+        <div class="form-group" id="task-progress-group">
+          <label for="task-progress">進捗</label>
+          <select id="task-progress">
+            <option value="0">0%</option>
+            <option value="10">10%</option>
+            <option value="20">20%</option>
+            <option value="30">30%</option>
+            <option value="40">40%</option>
+            <option value="50">50%</option>
+            <option value="60">60%</option>
+            <option value="70">70%</option>
+            <option value="80">80%</option>
+            <option value="90">90%</option>
+            <option value="100">100%</option>
+          </select>
         </div>
         <div class="form-group">
           <label for="task-due">期限</label>
           <input type="date" id="task-due">
         </div>
+      </div>
+      <div class="form-group">
+        <label>担当者 <span class="label-note">（複数選択可）</span></label>
+        <div id="task-assignees-picker" class="assignees-picker"></div>
       </div>
       <div class="form-group">
         <label for="task-notes">メモ</label>

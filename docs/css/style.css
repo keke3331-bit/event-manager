@@ -232,6 +232,12 @@ tr:nth-child(even) td { background: #F8FAFC; }
 /* actions */
 .task-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; margin-left: auto; }
 
+/* task progress mini bar */
+.task-progress { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.task-progress-bar { width: 44px; height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; flex-shrink: 0; }
+.task-progress-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.3s ease; }
+.task-progress-num { font-size: 11px; color: var(--text-muted); white-space: nowrap; min-width: 26px; text-align: right; }
+
 /* add-child button */
 .btn-add-child { background: none; border: 1px dashed var(--border); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 500; color: var(--text-muted); cursor: pointer; font-family: inherit; white-space: nowrap; transition: border-color 0.15s, color 0.15s; }
 .btn-add-child:hover { border-color: var(--accent); color: var(--accent); background: #EFF6FF; }
