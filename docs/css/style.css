@@ -208,6 +208,13 @@ tr:nth-child(even) td { background: #F8FAFC; }
 .btn-add-child { background: none; border: 1px dashed var(--border); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 500; color: var(--text-muted); cursor: pointer; font-family: inherit; white-space: nowrap; transition: border-color 0.15s, color 0.15s; }
 .btn-add-child:hover { border-color: var(--accent); color: var(--accent); background: #EFF6FF; }
 
+/* assignees picker */
+.label-note { font-weight: 400; color: var(--text-muted); }
+.assignees-picker { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0; }
+.assignee-btn { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-family: inherit; color: var(--text-light); cursor: pointer; transition: all 0.15s; }
+.assignee-btn:hover { border-color: var(--accent); color: var(--accent); }
+.assignee-btn.selected { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
 /* modal parent label */
 .task-parent-label { font-size: 12px; color: var(--text-muted); background: var(--bg); border-radius: 4px; padding: 5px 10px; margin-bottom: 12px; min-height: 0; }
 .task-parent-label:empty { display: none; }

@@ -235,15 +235,26 @@ function initEventDetail() {
     renderTasks();
   });
 
-  ['filter-assignee', 'task-assignee'].forEach(selId => {
-    const sel = document.getElementById(selId);
-    if (!sel) return;
+  const filterAssignee = document.getElementById('filter-assignee');
+  if (filterAssignee) {
     PLANNERS.forEach(p => {
       const opt = document.createElement('option');
       opt.value = opt.textContent = p;
-      sel.appendChild(opt);
+      filterAssignee.appendChild(opt);
     });
-  });
+  }
+  const picker = document.getElementById('task-assignees-picker');
+  if (picker) {
+    PLANNERS.forEach(p => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'assignee-btn';
+      btn.dataset.name = p;
+      btn.textContent = p;
+      btn.addEventListener('click', () => btn.classList.toggle('selected'));
+      picker.appendChild(btn);
+    });
+  }
 
   ['filter-status', 'filter-category', 'filter-assignee'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', renderTasks);
@@ -273,9 +284,9 @@ function initEventDetail() {
     const data = {
       eventId: currentEventId, level, parentId,
       title,
-      category: document.getElementById('task-category').value,
-      assignee: document.getElementById('task-assignee').value,
-      dueDate:  document.getElementById('task-due').value,
+      category:  document.getElementById('task-category').value,
+      assignees: Array.from(document.querySelectorAll('#task-assignees-picker .assignee-btn.selected')).map(b => b.dataset.name),
+      dueDate:   document.getElementById('task-due').value,
       status:   document.getElementById('task-status').value,
       notes:    document.getElementById('task-notes').value.trim(),
     };
@@ -348,10 +359,16 @@ function buildTree(tasks) {
   return roots;
 }
 
+function getAssignees(task) {
+  if (Array.isArray(task.assignees) && task.assignees.length) return task.assignees;
+  if (task.assignee) return [task.assignee];
+  return [];
+}
+
 function matchesFilter(task, statusF, categoryF, assigneeF) {
   const self = (!statusF || task.status === statusF) &&
                (!categoryF || task.category === categoryF) &&
-               (!assigneeF || task.assignee === assigneeF);
+               (!assigneeF || getAssignees(task).includes(assigneeF));
   return self || (task.children || []).some(c => matchesFilter(c, statusF, categoryF, assigneeF));
 }
 
@@ -385,7 +402,7 @@ function renderTaskBlock(task, level, today) {
     <span class="task-title-text${overdue ? ' overdue-text' : ''}">${task.title}${overdue ? '　⚠' : ''}</span>
     <span class="task-row-meta">
       ${catStyle ? `<span class="cat-badge" style="background:${catStyle.bg};color:${catStyle.fg}">${task.category}</span>` : ''}
-      ${task.assignee ? `<span class="task-meta-item">${task.assignee}</span>` : ''}
+      ${getAssignees(task).map(a => `<span class="task-meta-item">${a}</span>`).join('')}
       ${task.dueDate  ? `<span class="task-meta-item${overdue ? ' overdue-text' : ''}">${task.dueDate}</span>` : ''}
       ${childTotal > 0 ? `<span class="child-count">${childDone}/${childTotal}</span>` : ''}
     </span>
@@ -464,7 +481,10 @@ function openTaskModal(id = '', data = {}, level = 'large', parentId = '') {
   document.getElementById('task-parent-id').value  = parentId;
   document.getElementById('task-title').value      = data.title    || '';
   document.getElementById('task-category').value   = data.category || '';
-  document.getElementById('task-assignee').value   = data.assignee || '';
+  const selectedAssignees = getAssignees(data);
+  document.querySelectorAll('#task-assignees-picker .assignee-btn').forEach(btn => {
+    btn.classList.toggle('selected', selectedAssignees.includes(btn.dataset.name));
+  });
   document.getElementById('task-due').value        = data.dueDate  || '';
   document.getElementById('task-status').value     = data.status   || '未着手';
   document.getElementById('task-notes').value      = data.notes    || '';
