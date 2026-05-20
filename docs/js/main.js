@@ -160,8 +160,13 @@ function renderDashboard() {
   grid.innerHTML = events.map(ev => {
     const tasks     = allTasks.filter(t => t.eventId === ev.id);
     const total     = tasks.length;
+    const todoN     = tasks.filter(t => t.status === '未着手').length;
+    const wipN      = tasks.filter(t => t.status === '進行中').length;
     const completed = tasks.filter(t => t.status === '完了').length;
     const pct       = total > 0 ? Math.round(completed / total * 100) : 0;
+    const todoPct   = total > 0 ? todoN     / total * 100 : 0;
+    const wipPct    = total > 0 ? wipN      / total * 100 : 0;
+    const donePct   = total > 0 ? completed / total * 100 : 0;
     const overdueN  = tasks.filter(t => t.status !== '完了' && t.dueDate && t.dueDate < today).length;
     const { dateDisplay, dayLabel, dayClass } = eventDayInfo(ev);
 
@@ -178,8 +183,17 @@ function renderDashboard() {
           </div>
         </div>
         <div class="event-card__progress">
-          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-          <span class="progress-text">${completed}/${total} 完了</span>
+          <div class="progress-bar progress-bar--stacked">
+            <div class="pfill pfill--todo" style="width:${todoPct}%"></div>
+            <div class="pfill pfill--wip"  style="width:${wipPct}%"></div>
+            <div class="pfill pfill--done" style="width:${donePct}%"></div>
+          </div>
+          <span class="progress-text">${pct}%</span>
+        </div>
+        <div class="event-card__pchips">
+          <span class="pchip pchip--todo">${todoN} 未着手</span>
+          <span class="pchip pchip--wip">${wipN} 進行中</span>
+          <span class="pchip pchip--done">${completed} 完了</span>
         </div>
         <div class="event-card__footer">
           <span class="day-badge ${dayClass}">${dayLabel}</span>
@@ -456,9 +470,16 @@ function renderTasks() {
 
   const allList = Object.entries(cachedEventTasks).map(([id, t]) => ({ id, ...t }));
   const total   = allList.length;
+  const todo    = allList.filter(t => t.status === '未着手').length;
+  const wip     = allList.filter(t => t.status === '進行中').length;
   const done    = allList.filter(t => t.status === '完了').length;
   const pct     = total > 0 ? Math.round(done / total * 100) : 0;
-  document.getElementById('progress-fill').style.width  = pct + '%';
+  document.getElementById('pstat-todo').textContent     = todo;
+  document.getElementById('pstat-wip').textContent      = wip;
+  document.getElementById('pstat-done').textContent     = done;
+  document.getElementById('pfill-todo').style.width     = (total > 0 ? todo / total * 100 : 0) + '%';
+  document.getElementById('pfill-wip').style.width      = (total > 0 ? wip  / total * 100 : 0) + '%';
+  document.getElementById('pfill-done').style.width     = (total > 0 ? done / total * 100 : 0) + '%';
   document.getElementById('progress-label').textContent = `${done}/${total} 完了（${pct}%）`;
 
   treeEl.innerHTML = '';

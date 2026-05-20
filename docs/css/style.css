@@ -68,6 +68,34 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: va
 .progress-wrap  { display: flex; align-items: center; gap: 12px; }
 .progress-label { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
 
+/* ─── STACKED PROGRESS BAR ─── */
+.progress-bar--stacked { display: flex; }
+.pfill { height: 100%; transition: width 0.4s ease; min-width: 0; }
+.pfill--todo { background: #CBD5E1; }
+.pfill--wip  { background: var(--accent-orange); }
+.pfill--done { background: var(--accent-green); }
+.progress-bar--lg { height: 10px; }
+
+/* ─── PROGRESS SUMMARY (event detail) ─── */
+.progress-summary { display: flex; flex-direction: column; gap: 12px; }
+.pstat-row { display: flex; gap: 8px; }
+.pstat { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px 6px 8px; border-radius: 6px; gap: 3px; }
+.pstat--todo { background: #F8FAFC; border-top: 3px solid #94A3B8; }
+.pstat--wip  { background: #FFF7ED; border-top: 3px solid var(--accent-orange); }
+.pstat--done { background: #ECFDF5; border-top: 3px solid var(--accent-green); }
+.pstat-num { font-size: 24px; font-weight: 700; line-height: 1.1; }
+.pstat--todo .pstat-num { color: #64748B; }
+.pstat--wip  .pstat-num { color: var(--accent-orange); }
+.pstat--done .pstat-num { color: var(--accent-green); }
+.pstat-lbl { font-size: 11px; color: var(--text-muted); }
+
+/* ─── PROGRESS CHIPS (event card) ─── */
+.event-card__pchips { display: flex; gap: 10px; }
+.pchip { font-size: 11px; font-weight: 600; }
+.pchip--todo { color: #94A3B8; }
+.pchip--wip  { color: var(--accent-orange); }
+.pchip--done { color: var(--accent-green); }
+
 /* ─── BADGES ─── */
 .day-badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; background: #EFF6FF; color: var(--accent); }
 .day-badge.days--soon { background: #FEF3C7; color: #92400E; }

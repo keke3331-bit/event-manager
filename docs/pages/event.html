@@ -34,9 +34,20 @@
         <button class="btn-sm btn-sm--delete" id="btn-delete-event">削除</button>
       </div>
     </div>
-    <div class="progress-wrap">
-      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-      <span class="progress-label" id="progress-label">-</span>
+    <div class="progress-summary">
+      <div class="pstat-row">
+        <div class="pstat pstat--todo"><span class="pstat-num" id="pstat-todo">-</span><span class="pstat-lbl">未着手</span></div>
+        <div class="pstat pstat--wip"> <span class="pstat-num" id="pstat-wip">-</span> <span class="pstat-lbl">進行中</span></div>
+        <div class="pstat pstat--done"><span class="pstat-num" id="pstat-done">-</span><span class="pstat-lbl">完了</span></div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar progress-bar--stacked progress-bar--lg">
+          <div class="pfill pfill--todo" id="pfill-todo"></div>
+          <div class="pfill pfill--wip"  id="pfill-wip"></div>
+          <div class="pfill pfill--done" id="pfill-done"></div>
+        </div>
+        <span class="progress-label" id="progress-label">-</span>
+      </div>
     </div>
   </div>
 
