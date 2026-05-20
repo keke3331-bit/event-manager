@@ -486,6 +486,8 @@ function renderTasks() {
   document.getElementById('pstat-wip').textContent  = wip;
   document.getElementById('pstat-done').textContent = done;
 
+  treeEl.innerHTML = '';
+
   const roots = buildTree(allList);
   const overallProgress = roots.length > 0
     ? Math.round(roots.reduce((s, r) => s + calcProgress(r), 0) / roots.length)
@@ -493,15 +495,12 @@ function renderTasks() {
   document.getElementById('progress-fill').style.width  = overallProgress + '%';
   document.getElementById('progress-label').textContent = `全体進捗 ${overallProgress}%`;
 
-  treeEl.innerHTML = '';
-
-  const roots = buildTree(allList);
   const filtered = statusF || categoryF || assigneeF
     ? roots.filter(r => matchesFilter(r, statusF, categoryF, assigneeF))
     : roots;
 
   if (!filtered.length) {
-    treeEl.innerHTML = '<p class="no-data" style="padding:24px 0">タスクがありません。「+ 大タスク追加」から追加してください。</p>';
+    treeEl.innerHTML = '<p class="no-data" style="padding:24px 0">タスクがありません。「+ タスクの追加」から追加してください。</p>';
   } else {
     filtered.forEach(r => treeEl.appendChild(renderTaskBlock(r, 'large', today)));
   }
