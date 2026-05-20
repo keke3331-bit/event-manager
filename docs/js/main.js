@@ -421,43 +421,51 @@ const NEXT_LEVEL  = { large: 'medium', medium: 'small' };
 const ADD_LABEL   = { medium: '+小タスク', small: '+孫タスク' };
 
 function renderTaskBlock(task, level, today) {
-  const wrap = document.createElement('div');
-  wrap.className = `task-block task-block--${level}`;
-
-  const overdue  = task.status !== '完了' && task.dueDate && task.dueDate < today;
-  const isDone   = task.status === '完了';
-  const dotClass = isDone ? 'done' : task.status === '進行中' ? 'wip' : 'todo';
-  const catStyle = CATEGORY_COLOR[task.category];
+  const progress   = calcProgress(task);
+  const isDone     = task.status === '完了';
+  const progColor  = isDone ? '#10B981' : progress >= 70 ? '#10B981' : progress >= 30 ? '#F97316' : '#EF4444';
+  const overdue    = !isDone && task.dueDate && task.dueDate < today;
+  const dotClass   = isDone ? 'done' : task.status === '進行中' ? 'wip' : 'todo';
+  const catStyle   = CATEGORY_COLOR[task.category];
   const childTotal = countAll(task);
   const childDone  = countDone(task);
   const nextLevel  = NEXT_LEVEL[level];
-  const progress   = calcProgress(task);
 
-  const row = document.createElement('div');
-  row.className = `task-row${isDone ? ' task-row--done' : ''}`;
-  row.innerHTML = `
-    <span class="level-tag level-tag--${level}">${LEVEL_LABEL[level]}</span>
-    <button class="status-cycle" data-id="${task.id}" data-status="${task.status}" title="クリックでステータス変更">
-      <span class="status-dot status-dot--${dotClass}"></span>
-      <span class="status-text">${task.status}</span>
-    </button>
-    <span class="task-title-text${overdue ? ' overdue-text' : ''}">${task.title}${overdue ? '　⚠' : ''}</span>
-    <span class="task-row-meta">
+  const wrap = document.createElement('div');
+  wrap.className = `task-block task-block--${level}${isDone ? ' task-block--done' : ''}`;
+  wrap.style.setProperty('--prog-color', progColor);
+
+  const header = document.createElement('div');
+  header.className = 'task-header';
+  header.innerHTML = `
+    <div class="task-row-top">
+      <span class="level-tag level-tag--${level}">${LEVEL_LABEL[level]}</span>
+      <button class="status-cycle" data-id="${task.id}" data-status="${task.status}" title="クリックでステータス変更">
+        <span class="status-dot status-dot--${dotClass}"></span>
+        <span class="status-text">${task.status}</span>
+      </button>
+      <span class="task-title-text${overdue ? ' overdue-text' : ''}">${task.title}${overdue ? ' ⚠' : ''}</span>
+      <div class="task-actions">
+        ${nextLevel ? `<button class="btn-add-child" data-level="${nextLevel}" data-parent-id="${task.id}">${ADD_LABEL[nextLevel]}</button>` : ''}
+        <button class="btn-icon" data-action="edit"   data-id="${task.id}" title="編集">✎</button>
+        <button class="btn-icon btn-icon--danger" data-action="delete" data-id="${task.id}" title="削除">×</button>
+      </div>
+    </div>
+    <div class="task-row-sub">
       ${catStyle ? `<span class="cat-badge" style="background:${catStyle.bg};color:${catStyle.fg}">${task.category}</span>` : ''}
       ${getAssignees(task).map(a => `<span class="task-meta-item">${a}</span>`).join('')}
-      ${task.dueDate  ? `<span class="task-meta-item${overdue ? ' overdue-text' : ''}">${task.dueDate}</span>` : ''}
+      ${task.dueDate ? `<span class="task-meta-item${overdue ? ' overdue-text' : ''}">${task.dueDate}</span>` : ''}
       ${childTotal > 0 ? `<span class="child-count">${childDone}/${childTotal}</span>` : ''}
-    </span>
-    <span class="task-progress">
-      <span class="task-progress-bar"><span class="task-progress-fill" style="width:${progress}%"></span></span>
-      <span class="task-progress-num">${progress}%</span>
-    </span>
-    <div class="task-actions">
-      ${nextLevel ? `<button class="btn-add-child" data-level="${nextLevel}" data-parent-id="${task.id}">${ADD_LABEL[nextLevel]}</button>` : ''}
-      <button class="btn-icon" data-action="edit"   data-id="${task.id}" title="編集">✎</button>
-      <button class="btn-icon btn-icon--danger" data-action="delete" data-id="${task.id}" title="削除">×</button>
     </div>`;
-  wrap.appendChild(row);
+
+  const progEl = document.createElement('div');
+  progEl.className = 'task-block-progress';
+  progEl.innerHTML = `
+    <div class="task-block-pbar"><div class="task-block-pfill" style="width:${progress}%"></div></div>
+    <span class="task-block-pct">${progress}%</span>`;
+
+  wrap.appendChild(header);
+  wrap.appendChild(progEl);
 
   if (task.children?.length) {
     const childLevel   = nextLevel || 'small';
