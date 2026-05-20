@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>イベント管理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="header__logo">イベント管理</div>
+  <button class="hamburger" aria-label="メニュー">
+    <span></span><span></span><span></span>
+  </button>
+</header>
+
+<main class="main">
+
+  <div class="stats-bar">
+    <div class="stat-card"><span class="stat-num" id="stat-events">-</span><span class="stat-label">イベント数</span></div>
+    <div class="stat-card"><span class="stat-num" id="stat-tasks">-</span><span class="stat-label">全タスク</span></div>
+    <div class="stat-card stat-card--warn"><span class="stat-num" id="stat-overdue">-</span><span class="stat-label">期限超過</span></div>
+    <div class="stat-card stat-card--ok"><span class="stat-num" id="stat-completed">-</span><span class="stat-label">完了タスク</span></div>
+  </div>
+
+  <section>
+    <h2 class="section-title">イベント一覧</h2>
+    <div class="event-grid" id="event-grid">
+      <p class="no-data">読み込み中…</p>
+    </div>
+  </section>
+
+</main>
+
+<button class="fab" id="fab-new-event">+ 新規イベント</button>
+
+<!-- イベント新規/編集モーダル -->
+<div class="modal-overlay" id="event-modal">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="event-modal-title">新規イベント</h2>
+      <button class="modal__close" id="event-modal-close">×</button>
+    </div>
+    <form id="event-form">
+      <input type="hidden" id="event-edit-id">
+      <div class="form-group">
+        <label for="event-name">イベント名 <span class="required">*</span></label>
+        <input type="text" id="event-name" required>
+      </div>
+      <div class="form-group">
+        <label for="event-date">開催日 <span class="required">*</span></label>
+        <input type="date" id="event-date" required>
+      </div>
+      <div class="form-group">
+        <label for="event-location">会場</label>
+        <input type="text" id="event-location" placeholder="例：〇〇会議室">
+      </div>
+      <div class="form-group">
+        <label for="event-notes">備考</label>
+        <textarea id="event-notes" rows="2"></textarea>
+      </div>
+      <div class="btn-group">
+        <button type="submit" class="btn btn-primary">保存</button>
+        <button type="button" id="event-modal-cancel" class="btn btn-secondary">キャンセル</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>イベント詳細 | イベント管理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="header__logo">イベント管理</div>
+  <nav class="header__nav">
+    <a href="../index.html">← イベント一覧</a>
+  </nav>
+  <button class="hamburger" aria-label="メニュー">
+    <span></span><span></span><span></span>
+  </button>
+</header>
+
+<main class="main">
+
+  <!-- イベント情報 -->
+  <div class="card event-header-card" id="event-info">
+    <div class="event-header-top">
+      <div>
+        <h1 class="event-title" id="event-title-display">読み込み中…</h1>
+        <p class="event-meta" id="event-meta-display"></p>
+      </div>
+      <div class="event-header-actions">
+        <button class="btn-sm btn-sm--edit" id="btn-edit-event">編集</button>
+        <button class="btn-sm btn-sm--delete" id="btn-delete-event">削除</button>
+      </div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <span class="progress-label" id="progress-label">-</span>
+    </div>
+  </div>
+
+  <!-- フィルターバー -->
+  <div class="filter-bar">
+    <select id="filter-status" class="filter-select">
+      <option value="">全ステータス</option>
+      <option value="未着手">未着手</option>
+      <option value="進行中">進行中</option>
+      <option value="完了">完了</option>
+    </select>
+    <select id="filter-category" class="filter-select">
+      <option value="">全カテゴリ</option>
+      <option value="会場">会場</option>
+      <option value="資料">資料</option>
+      <option value="集客">集客</option>
+      <option value="準備物">準備物</option>
+      <option value="その他">その他</option>
+    </select>
+    <select id="filter-assignee" class="filter-select">
+      <option value="">全担当者</option>
+    </select>
+    <button class="btn-nav" id="btn-filter-reset">リセット</button>
+  </div>
+
+  <!-- タスク一覧 -->
+  <div class="card table-wrap" style="padding:0">
+    <table>
+      <thead>
+        <tr>
+          <th>状態</th>
+          <th>タスク名</th>
+          <th>カテゴリ</th>
+          <th>担当者</th>
+          <th>期限</th>
+          <th>メモ</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="task-body"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<button class="fab" id="fab-new-task">+ タスク追加</button>
+
+<!-- タスク追加/編集モーダル -->
+<div class="modal-overlay" id="task-modal">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="task-modal-title">タスク追加</h2>
+      <button class="modal__close" id="task-modal-close">×</button>
+    </div>
+    <form id="task-form">
+      <input type="hidden" id="task-edit-id">
+      <div class="form-group">
+        <label for="task-title">タスク名 <span class="required">*</span></label>
+        <input type="text" id="task-title" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="task-category">カテゴリ</label>
+          <select id="task-category">
+            <option value="">選択してください</option>
+            <option value="会場">会場</option>
+            <option value="資料">資料</option>
+            <option value="集客">集客</option>
+            <option value="準備物">準備物</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="task-status">ステータス</label>
+          <select id="task-status">
+            <option value="未着手">未着手</option>
+            <option value="進行中">進行中</option>
+            <option value="完了">完了</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="task-assignee">担当者</label>
+          <select id="task-assignee">
+            <option value="">未定</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="task-due">期限</label>
+          <input type="date" id="task-due">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="task-notes">メモ</label>
+        <textarea id="task-notes" rows="2"></textarea>
+      </div>
+      <div class="btn-group">
+        <button type="submit" class="btn btn-primary">保存</button>
+        <button type="button" id="task-modal-cancel" class="btn btn-secondary">キャンセル</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- イベント編集モーダル -->
+<div class="modal-overlay" id="edit-event-modal">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title">イベント編集</h2>
+      <button class="modal__close" id="edit-event-modal-close">×</button>
+    </div>
+    <form id="edit-event-form">
+      <div class="form-group">
+        <label for="edit-event-name">イベント名 <span class="required">*</span></label>
+        <input type="text" id="edit-event-name" required>
+      </div>
+      <div class="form-group">
+        <label for="edit-event-date">開催日 <span class="required">*</span></label>
+        <input type="date" id="edit-event-date" required>
+      </div>
+      <div class="form-group">
+        <label for="edit-event-location">会場</label>
+        <input type="text" id="edit-event-location">
+      </div>
+      <div class="form-group">
+        <label for="edit-event-notes">備考</label>
+        <textarea id="edit-event-notes" rows="2"></textarea>
+      </div>
+      <div class="btn-group">
+        <button type="submit" class="btn btn-primary">保存</button>
+        <button type="button" id="edit-event-modal-cancel" class="btn btn-secondary">キャンセル</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast"></div>
+<script type="module" src="../js/main.js"></script>
+</body>
+</html>
