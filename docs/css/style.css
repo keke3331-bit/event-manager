@@ -159,6 +159,59 @@ tr:nth-child(even) td { background: #F8FAFC; }
 .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; white-space: nowrap; z-index: 400; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* ─── TASK TREE ─── */
+.task-tree { display: flex; flex-direction: column; gap: 10px; }
+
+.task-block { border-radius: var(--radius); overflow: hidden; }
+.task-block--large  { border: 1px solid var(--border); background: var(--card); }
+.task-block--medium { margin-left: 24px; border: 1px solid var(--border); background: #FAFBFD; }
+.task-block--small  { margin-left: 24px; border: 1px solid #EEF2F8; background: #F8FAFC; }
+
+.task-children { display: flex; flex-direction: column; gap: 8px; padding: 8px 12px 12px; border-top: 1px solid var(--border); }
+.task-block--medium .task-children { border-top-color: #EEF2F8; padding: 6px 10px 10px; }
+
+.task-row {
+  display: flex; align-items: center; gap: 8px; padding: 11px 12px; flex-wrap: wrap;
+}
+.task-row--done .task-title-text { text-decoration: line-through; color: var(--text-muted); }
+.task-row--done .status-text { color: var(--text-muted); }
+
+.task-block--large  > .task-row { padding: 13px 14px; }
+.task-block--medium > .task-row { padding: 10px 12px; }
+.task-block--small  > .task-row { padding: 8px 10px; }
+
+/* level tag */
+.level-tag { display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; width: 20px; height: 20px; border-radius: 4px; flex-shrink: 0; }
+.level-tag--large  { background: #1E293B; color: #fff; }
+.level-tag--medium { background: #3B82F6; color: #fff; }
+.level-tag--small  { background: #94A3B8; color: #fff; }
+
+/* task title */
+.task-title-text { flex: 1; font-size: 14px; font-weight: 600; min-width: 0; word-break: break-all; }
+.task-block--medium .task-title-text { font-size: 13px; font-weight: 600; }
+.task-block--small  .task-title-text { font-size: 13px; font-weight: 400; }
+
+/* meta row */
+.task-row-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
+.task-meta-item { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+
+/* child count badge */
+.child-count { font-size: 11px; font-weight: 600; color: #fff; background: var(--accent); padding: 1px 7px; border-radius: 20px; white-space: nowrap; }
+
+/* status text */
+.status-text { font-size: 11px; color: var(--text-muted); }
+
+/* actions */
+.task-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; margin-left: auto; }
+
+/* add-child button */
+.btn-add-child { background: none; border: 1px dashed var(--border); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 500; color: var(--text-muted); cursor: pointer; font-family: inherit; white-space: nowrap; transition: border-color 0.15s, color 0.15s; }
+.btn-add-child:hover { border-color: var(--accent); color: var(--accent); background: #EFF6FF; }
+
+/* modal parent label */
+.task-parent-label { font-size: 12px; color: var(--text-muted); background: var(--bg); border-radius: 4px; padding: 5px 10px; margin-bottom: 12px; min-height: 0; }
+.task-parent-label:empty { display: none; }
+
 /* ─── RESPONSIVE ─── */
 @media (max-width: 600px) {
   .hamburger { display: flex; }

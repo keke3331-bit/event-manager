@@ -62,27 +62,12 @@
     <button class="btn-nav" id="btn-filter-reset">リセット</button>
   </div>
 
-  <!-- タスク一覧 -->
-  <div class="card table-wrap" style="padding:0">
-    <table>
-      <thead>
-        <tr>
-          <th>状態</th>
-          <th>タスク名</th>
-          <th>カテゴリ</th>
-          <th>担当者</th>
-          <th>期限</th>
-          <th>メモ</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="task-body"></tbody>
-    </table>
-  </div>
+  <!-- タスクツリー -->
+  <div id="task-tree" class="task-tree"></div>
 
 </main>
 
-<button class="fab" id="fab-new-task">+ タスク追加</button>
+<button class="fab" id="fab-new-task">+ 大タスク追加</button>
 
 <!-- タスク追加/編集モーダル -->
 <div class="modal-overlay" id="task-modal">
@@ -93,6 +78,9 @@
     </div>
     <form id="task-form">
       <input type="hidden" id="task-edit-id">
+      <input type="hidden" id="task-level">
+      <input type="hidden" id="task-parent-id">
+      <p class="task-parent-label" id="task-parent-label"></p>
       <div class="form-group">
         <label for="task-title">タスク名 <span class="required">*</span></label>
         <input type="text" id="task-title" required>

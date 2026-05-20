@@ -216,7 +216,7 @@ let currentEventData = {};
 let cachedEventTasks = {};
 
 function initEventDetail() {
-  if (!document.getElementById('task-body')) return;
+  if (!document.getElementById('task-tree')) return;
 
   const params = new URLSearchParams(window.location.search);
   currentEventId = params.get('id');
@@ -235,7 +235,6 @@ function initEventDetail() {
     renderTasks();
   });
 
-  // 担当者プルダウン
   ['filter-assignee', 'task-assignee'].forEach(selId => {
     const sel = document.getElementById(selId);
     if (!sel) return;
@@ -246,7 +245,6 @@ function initEventDetail() {
     });
   });
 
-  // フィルター
   ['filter-status', 'filter-category', 'filter-assignee'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', renderTasks);
   });
@@ -257,8 +255,7 @@ function initEventDetail() {
     renderTasks();
   });
 
-  // タスク追加FAB
-  document.getElementById('fab-new-task')?.addEventListener('click', () => openTaskModal());
+  document.getElementById('fab-new-task')?.addEventListener('click', () => openTaskModal('', {}, 'large', ''));
   document.getElementById('task-modal-close')?.addEventListener('click', closeTaskModal);
   document.getElementById('task-modal-cancel')?.addEventListener('click', closeTaskModal);
   document.getElementById('task-modal')?.addEventListener('click', e => {
@@ -267,12 +264,14 @@ function initEventDetail() {
 
   document.getElementById('task-form')?.addEventListener('submit', async e => {
     e.preventDefault();
-    const editId = document.getElementById('task-edit-id').value;
-    const title  = document.getElementById('task-title').value.trim();
+    const editId   = document.getElementById('task-edit-id').value;
+    const title    = document.getElementById('task-title').value.trim();
+    const level    = document.getElementById('task-level').value    || 'large';
+    const parentId = document.getElementById('task-parent-id').value || '';
     if (!title) return;
 
     const data = {
-      eventId:  currentEventId,
+      eventId: currentEventId, level, parentId,
       title,
       category: document.getElementById('task-category').value,
       assignee: document.getElementById('task-assignee').value,
@@ -295,7 +294,6 @@ function initEventDetail() {
     }
   });
 
-  // イベント編集・削除
   document.getElementById('btn-edit-event')?.addEventListener('click', openEditEventModal);
   document.getElementById('btn-delete-event')?.addEventListener('click', deleteCurrentEvent);
   document.getElementById('edit-event-modal-close')?.addEventListener('click', closeEditEventModal);
@@ -330,103 +328,152 @@ function renderEventInfo() {
   const days = ev.date ? getDaysUntil(ev.date) : null;
   const dayStr = days === null ? '' :
     days < 0  ? `（開催済み・${-days}日前）` :
-    days === 0 ? '（本日開催）' :
-                 `（あと${days}日）`;
+    days === 0 ? '（本日開催）' : `（あと${days}日）`;
   document.getElementById('event-meta-display').textContent =
     `${ev.date || ''}${ev.location ? '　' + ev.location : ''}${dayStr}`;
 }
 
+/* ─── Task tree rendering ─── */
+function buildTree(tasks) {
+  const byId = {};
+  tasks.forEach(t => { byId[t.id] = { ...t, children: [] }; });
+  const roots = [];
+  tasks.forEach(t => {
+    if (!t.parentId) roots.push(byId[t.id]);
+    else if (byId[t.parentId]) byId[t.parentId].children.push(byId[t.id]);
+  });
+  const sortByDate = arr => arr.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  sortByDate(roots);
+  roots.forEach(r => { sortByDate(r.children); r.children.forEach(c => sortByDate(c.children)); });
+  return roots;
+}
+
+function matchesFilter(task, statusF, categoryF, assigneeF) {
+  const self = (!statusF || task.status === statusF) &&
+               (!categoryF || task.category === categoryF) &&
+               (!assigneeF || task.assignee === assigneeF);
+  return self || (task.children || []).some(c => matchesFilter(c, statusF, categoryF, assigneeF));
+}
+
+function countAll(task)  { return (task.children || []).reduce((s, c) => s + 1 + countAll(c), 0); }
+function countDone(task) { return (task.children || []).reduce((s, c) => s + (c.status === '完了' ? 1 : 0) + countDone(c), 0); }
+
+const LEVEL_LABEL = { large: '大', medium: '中', small: '小' };
+const NEXT_LEVEL  = { large: 'medium', medium: 'small' };
+const ADD_LABEL   = { medium: '+中タスク', small: '+小タスク' };
+
+function renderTaskBlock(task, level, today) {
+  const wrap = document.createElement('div');
+  wrap.className = `task-block task-block--${level}`;
+
+  const overdue  = task.status !== '完了' && task.dueDate && task.dueDate < today;
+  const isDone   = task.status === '完了';
+  const dotClass = isDone ? 'done' : task.status === '進行中' ? 'wip' : 'todo';
+  const catStyle = CATEGORY_COLOR[task.category];
+  const childTotal = countAll(task);
+  const childDone  = countDone(task);
+  const nextLevel  = NEXT_LEVEL[level];
+
+  const row = document.createElement('div');
+  row.className = `task-row${isDone ? ' task-row--done' : ''}`;
+  row.innerHTML = `
+    <span class="level-tag level-tag--${level}">${LEVEL_LABEL[level]}</span>
+    <button class="status-cycle" data-id="${task.id}" data-status="${task.status}" title="クリックでステータス変更">
+      <span class="status-dot status-dot--${dotClass}"></span>
+      <span class="status-text">${task.status}</span>
+    </button>
+    <span class="task-title-text${overdue ? ' overdue-text' : ''}">${task.title}${overdue ? '　⚠' : ''}</span>
+    <span class="task-row-meta">
+      ${catStyle ? `<span class="cat-badge" style="background:${catStyle.bg};color:${catStyle.fg}">${task.category}</span>` : ''}
+      ${task.assignee ? `<span class="task-meta-item">${task.assignee}</span>` : ''}
+      ${task.dueDate  ? `<span class="task-meta-item${overdue ? ' overdue-text' : ''}">${task.dueDate}</span>` : ''}
+      ${childTotal > 0 ? `<span class="child-count">${childDone}/${childTotal}</span>` : ''}
+    </span>
+    <div class="task-actions">
+      ${nextLevel ? `<button class="btn-add-child" data-level="${nextLevel}" data-parent-id="${task.id}">${ADD_LABEL[nextLevel]}</button>` : ''}
+      <button class="btn-icon" data-action="edit"   data-id="${task.id}" title="編集">✎</button>
+      <button class="btn-icon btn-icon--danger" data-action="delete" data-id="${task.id}" title="削除">×</button>
+    </div>`;
+  wrap.appendChild(row);
+
+  if (task.children?.length) {
+    const childLevel   = nextLevel || 'small';
+    const childrenWrap = document.createElement('div');
+    childrenWrap.className = 'task-children';
+    task.children.forEach(c => childrenWrap.appendChild(renderTaskBlock(c, childLevel, today)));
+    wrap.appendChild(childrenWrap);
+  }
+  return wrap;
+}
+
 function renderTasks() {
-  const tbody     = document.getElementById('task-body');
-  if (!tbody) return;
+  const treeEl = document.getElementById('task-tree');
+  if (!treeEl) return;
+
   const today     = toISO(new Date());
   const statusF   = document.getElementById('filter-status')?.value   || '';
   const categoryF = document.getElementById('filter-category')?.value || '';
   const assigneeF = document.getElementById('filter-assignee')?.value || '';
 
-  const tasks = Object.entries(cachedEventTasks)
-    .map(([id, t]) => ({ id, ...t }))
-    .filter(t => !statusF   || t.status   === statusF)
-    .filter(t => !categoryF || t.category === categoryF)
-    .filter(t => !assigneeF || t.assignee === assigneeF)
-    .sort((a, b) => {
-      const ao = a.status === '完了' ? 1 : 0;
-      const bo = b.status === '完了' ? 1 : 0;
-      if (ao !== bo) return ao - bo;
-      return (a.dueDate || '9999').localeCompare(b.dueDate || '9999');
-    });
-
-  // プログレス更新
-  const all   = Object.values(cachedEventTasks);
-  const total = all.length;
-  const done  = all.filter(t => t.status === '完了').length;
-  const pct   = total > 0 ? Math.round(done / total * 100) : 0;
-  document.getElementById('progress-fill').style.width = pct + '%';
+  const allList = Object.entries(cachedEventTasks).map(([id, t]) => ({ id, ...t }));
+  const total   = allList.length;
+  const done    = allList.filter(t => t.status === '完了').length;
+  const pct     = total > 0 ? Math.round(done / total * 100) : 0;
+  document.getElementById('progress-fill').style.width  = pct + '%';
   document.getElementById('progress-label').textContent = `${done}/${total} 完了（${pct}%）`;
 
-  tbody.innerHTML = '';
-  if (!tasks.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#9CA3AF;padding:24px">タスクがありません</td></tr>';
-    return;
+  treeEl.innerHTML = '';
+
+  const roots = buildTree(allList);
+  const filtered = statusF || categoryF || assigneeF
+    ? roots.filter(r => matchesFilter(r, statusF, categoryF, assigneeF))
+    : roots;
+
+  if (!filtered.length) {
+    treeEl.innerHTML = '<p class="no-data" style="padding:24px 0">タスクがありません。「+ 大タスク追加」から追加してください。</p>';
+  } else {
+    filtered.forEach(r => treeEl.appendChild(renderTaskBlock(r, 'large', today)));
   }
 
-  tasks.forEach(t => {
-    const overdue  = t.status !== '完了' && t.dueDate && t.dueDate < today;
-    const catStyle = CATEGORY_COLOR[t.category];
-    const dotClass = t.status === '完了' ? 'done' : t.status === '進行中' ? 'wip' : 'todo';
-    const tr = document.createElement('tr');
-    if (t.status === '完了') tr.classList.add('row--done');
-
-    tr.innerHTML = `
-      <td>
-        <button class="status-cycle" data-id="${t.id}" data-status="${t.status}" title="クリックでステータス変更">
-          <span class="status-dot status-dot--${dotClass}"></span>
-          <span>${t.status}</span>
-        </button>
-      </td>
-      <td class="${overdue ? 'overdue-text' : ''}">${t.title}${overdue ? '　⚠' : ''}</td>
-      <td>${catStyle ? `<span class="cat-badge" style="background:${catStyle.bg};color:${catStyle.fg}">${t.category}</span>` : '-'}</td>
-      <td>${t.assignee || '-'}</td>
-      <td class="${overdue ? 'overdue-text' : ''}">${t.dueDate || '-'}</td>
-      <td class="notes-cell" title="${t.notes || ''}">${t.notes || '-'}</td>
-      <td>
-        <div class="action-btns">
-          <button class="btn-sm btn-sm--edit"   data-action="edit"   data-id="${t.id}">編集</button>
-          <button class="btn-sm btn-sm--delete" data-action="delete" data-id="${t.id}">削除</button>
-        </div>
-      </td>`;
-    tbody.appendChild(tr);
-  });
-
-  tbody.querySelectorAll('[data-action]').forEach(btn => {
-    const { action, id } = btn.dataset;
+  treeEl.querySelectorAll('[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (action === 'edit')   openTaskModal(id, cachedEventTasks[id]);
+      const { action, id } = btn.dataset;
+      if (action === 'edit')   openTaskModal(id, cachedEventTasks[id], cachedEventTasks[id]?.level || 'large', cachedEventTasks[id]?.parentId || '');
       if (action === 'delete') deleteTask(id);
     });
   });
 
-  tbody.querySelectorAll('.status-cycle').forEach(btn => {
+  treeEl.querySelectorAll('.btn-add-child').forEach(btn => {
+    btn.addEventListener('click', () => openTaskModal('', {}, btn.dataset.level, btn.dataset.parentId));
+  });
+
+  treeEl.querySelectorAll('.status-cycle').forEach(btn => {
     btn.addEventListener('click', async () => {
       const next = STATUS_LIST[(STATUS_LIST.indexOf(btn.dataset.status) + 1) % STATUS_LIST.length];
       try {
         await update(ref(db, `event_data/tasks/${btn.dataset.id}`), { status: next });
-      } catch (err) {
-        showToast('⚠️ ' + err.message);
-      }
+      } catch (err) { showToast('⚠️ ' + err.message); }
     });
   });
 }
 
-function openTaskModal(id = '', data = {}) {
-  document.getElementById('task-edit-id').value  = id;
-  document.getElementById('task-title').value    = data.title    || '';
-  document.getElementById('task-category').value = data.category || '';
-  document.getElementById('task-assignee').value = data.assignee || '';
-  document.getElementById('task-due').value      = data.dueDate  || '';
-  document.getElementById('task-status').value   = data.status   || '未着手';
-  document.getElementById('task-notes').value    = data.notes    || '';
-  document.getElementById('task-modal-title').textContent = id ? 'タスク編集' : 'タスク追加';
+function openTaskModal(id = '', data = {}, level = 'large', parentId = '') {
+  const levelName = { large: '大タスク', medium: '中タスク', small: '小タスク' }[level];
+  document.getElementById('task-edit-id').value    = id;
+  document.getElementById('task-level').value      = level;
+  document.getElementById('task-parent-id').value  = parentId;
+  document.getElementById('task-title').value      = data.title    || '';
+  document.getElementById('task-category').value   = data.category || '';
+  document.getElementById('task-assignee').value   = data.assignee || '';
+  document.getElementById('task-due').value        = data.dueDate  || '';
+  document.getElementById('task-status').value     = data.status   || '未着手';
+  document.getElementById('task-notes').value      = data.notes    || '';
+  document.getElementById('task-modal-title').textContent = id ? `${levelName}編集` : `${levelName}追加`;
+
+  const parentLabel = document.getElementById('task-parent-label');
+  const parentTask  = parentId ? cachedEventTasks[parentId] : null;
+  parentLabel.textContent = parentTask ? `上位タスク：${parentTask.title}` : '';
+
   document.getElementById('task-modal').classList.add('open');
 }
 
@@ -435,13 +482,22 @@ function closeTaskModal() {
 }
 
 async function deleteTask(id) {
-  if (!confirm('このタスクを削除しますか？')) return;
+  const task = cachedEventTasks[id];
+  const hasChildren = Object.values(cachedEventTasks).some(t => t.parentId === id);
+  const msg = hasChildren ? 'このタスクを削除しますか？\n配下の中・小タスクもすべて削除されます。' : 'このタスクを削除しますか？';
+  if (!confirm(msg)) return;
+
+  const toDelete = [id];
+  const collect  = pid => {
+    Object.entries(cachedEventTasks).forEach(([tid, t]) => {
+      if (t.parentId === pid) { toDelete.push(tid); collect(tid); }
+    });
+  };
+  collect(id);
   try {
-    await remove(ref(db, `event_data/tasks/${id}`));
+    await Promise.all(toDelete.map(tid => remove(ref(db, `event_data/tasks/${tid}`))));
     showToast('✅ 削除しました');
-  } catch (err) {
-    showToast('⚠️ ' + err.message);
-  }
+  } catch (err) { showToast('⚠️ ' + err.message); }
 }
 
 function openEditEventModal() {
