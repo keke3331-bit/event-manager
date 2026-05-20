@@ -375,9 +375,9 @@ function matchesFilter(task, statusF, categoryF, assigneeF) {
 function countAll(task)  { return (task.children || []).reduce((s, c) => s + 1 + countAll(c), 0); }
 function countDone(task) { return (task.children || []).reduce((s, c) => s + (c.status === '完了' ? 1 : 0) + countDone(c), 0); }
 
-const LEVEL_LABEL = { large: '大', medium: '中', small: '小' };
+const LEVEL_LABEL = { large: '親', medium: '小', small: '孫' };
 const NEXT_LEVEL  = { large: 'medium', medium: 'small' };
-const ADD_LABEL   = { medium: '+中タスク', small: '+小タスク' };
+const ADD_LABEL   = { medium: '+小タスク', small: '+孫タスク' };
 
 function renderTaskBlock(task, level, today) {
   const wrap = document.createElement('div');
@@ -475,7 +475,7 @@ function renderTasks() {
 }
 
 function openTaskModal(id = '', data = {}, level = 'large', parentId = '') {
-  const levelName = { large: '大タスク', medium: '中タスク', small: '小タスク' }[level];
+  const levelName = { large: '親タスク', medium: '小タスク', small: '孫タスク' }[level];
   document.getElementById('task-edit-id').value    = id;
   document.getElementById('task-level').value      = level;
   document.getElementById('task-parent-id').value  = parentId;
