@@ -40,6 +40,27 @@ function getDaysUntil(dateStr) {
   return Math.round((target - today) / 86400000);
 }
 
+function eventDayInfo(ev) {
+  const startDate   = ev.startDate || ev.date || '';
+  const endDate     = ev.endDate   || startDate;
+  const dateDisplay = (endDate && endDate !== startDate) ? `${startDate} 〜 ${endDate}` : startDate;
+  const daysToStart = startDate ? getDaysUntil(startDate) : null;
+  const daysToEnd   = endDate   ? getDaysUntil(endDate)   : daysToStart;
+  let dayLabel, dayClass;
+  if (daysToStart === null) {
+    dayLabel = ''; dayClass = '';
+  } else if (daysToEnd < 0) {
+    dayLabel = `開催済み（${-daysToEnd}日前）`; dayClass = 'days--past';
+  } else if (daysToStart <= 0) {
+    dayLabel = '開催中'; dayClass = 'days--today';
+  } else if (daysToStart <= 7) {
+    dayLabel = `あと${daysToStart}日`; dayClass = 'days--soon';
+  } else {
+    dayLabel = `あと${daysToStart}日`; dayClass = '';
+  }
+  return { startDate, endDate, dateDisplay, dayLabel, dayClass };
+}
+
 function showToast(msg) {
   let t = document.querySelector('.toast');
   if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
@@ -87,12 +108,14 @@ function initDashboard() {
   document.getElementById('event-form')?.addEventListener('submit', async e => {
     e.preventDefault();
     const id   = document.getElementById('event-edit-id').value;
-    const name = document.getElementById('event-name').value.trim();
-    const date = document.getElementById('event-date').value;
-    if (!name || !date) return;
+    const name      = document.getElementById('event-name').value.trim();
+    const startDate = document.getElementById('event-start-date').value;
+    const endDate   = document.getElementById('event-end-date').value;
+    if (!name || !startDate) return;
+    if (endDate && endDate < startDate) { showToast('⚠️ 終了日は開始日以降を選択してください'); return; }
 
     const data = {
-      name, date,
+      name, startDate, endDate,
       location: document.getElementById('event-location').value.trim(),
       notes:    document.getElementById('event-notes').value.trim(),
     };
@@ -119,7 +142,7 @@ function renderDashboard() {
   const today  = toISO(new Date());
   const events = Object.entries(cachedEvents)
     .map(([id, e]) => ({ id, ...e }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a, b) => (a.startDate || a.date || '').localeCompare(b.startDate || b.date || ''));
 
   const allTasks  = Object.values(cachedTasks);
   const overdue   = allTasks.filter(t => t.status !== '完了' && t.dueDate && t.dueDate < today).length;
@@ -140,16 +163,14 @@ function renderDashboard() {
     const completed = tasks.filter(t => t.status === '完了').length;
     const pct       = total > 0 ? Math.round(completed / total * 100) : 0;
     const overdueN  = tasks.filter(t => t.status !== '完了' && t.dueDate && t.dueDate < today).length;
-    const days      = getDaysUntil(ev.date);
-    const dayLabel  = days < 0 ? `開催済み（${-days}日前）` : days === 0 ? '本日開催' : `あと${days}日`;
-    const dayClass  = days < 0 ? 'days--past' : days === 0 ? 'days--today' : days <= 7 ? 'days--soon' : '';
+    const { dateDisplay, dayLabel, dayClass } = eventDayInfo(ev);
 
     return `
       <div class="event-card" data-id="${ev.id}">
         <div class="event-card__top">
           <div>
             <div class="event-card__name">${ev.name}</div>
-            <div class="event-card__meta">${ev.date}${ev.location ? '　' + ev.location : ''}</div>
+            <div class="event-card__meta">${dateDisplay}${ev.location ? '　' + ev.location : ''}</div>
           </div>
           <div class="event-card__actions">
             <button class="btn-icon" data-action="edit"   data-id="${ev.id}" title="編集">✎</button>
@@ -183,11 +204,12 @@ function renderDashboard() {
 }
 
 function openEventModal(id = '', data = {}) {
-  document.getElementById('event-edit-id').value    = id;
-  document.getElementById('event-name').value       = data.name     || '';
-  document.getElementById('event-date').value       = data.date     || '';
-  document.getElementById('event-location').value   = data.location || '';
-  document.getElementById('event-notes').value      = data.notes    || '';
+  document.getElementById('event-edit-id').value       = id;
+  document.getElementById('event-name').value          = data.name      || '';
+  document.getElementById('event-start-date').value    = data.startDate || data.date || '';
+  document.getElementById('event-end-date').value      = data.endDate   || '';
+  document.getElementById('event-location').value      = data.location  || '';
+  document.getElementById('event-notes').value         = data.notes     || '';
   document.getElementById('event-modal-title').textContent = id ? 'イベント編集' : '新規イベント';
   document.getElementById('event-modal').classList.add('open');
 }
@@ -315,12 +337,14 @@ function initEventDetail() {
 
   document.getElementById('edit-event-form')?.addEventListener('submit', async e => {
     e.preventDefault();
-    const name = document.getElementById('edit-event-name').value.trim();
-    const date = document.getElementById('edit-event-date').value;
-    if (!name || !date) return;
+    const name      = document.getElementById('edit-event-name').value.trim();
+    const startDate = document.getElementById('edit-event-start-date').value;
+    const endDate   = document.getElementById('edit-event-end-date').value;
+    if (!name || !startDate) return;
+    if (endDate && endDate < startDate) { showToast('⚠️ 終了日は開始日以降を選択してください'); return; }
     try {
       await update(ref(db, `event_data/events/${currentEventId}`), {
-        name, date,
+        name, startDate, endDate,
         location: document.getElementById('edit-event-location').value.trim(),
         notes:    document.getElementById('edit-event-notes').value.trim(),
       });
@@ -336,12 +360,10 @@ function renderEventInfo() {
   const ev = currentEventData;
   document.title = `${ev.name || 'イベント詳細'} | イベント管理`;
   document.getElementById('event-title-display').textContent = ev.name || '-';
-  const days = ev.date ? getDaysUntil(ev.date) : null;
-  const dayStr = days === null ? '' :
-    days < 0  ? `（開催済み・${-days}日前）` :
-    days === 0 ? '（本日開催）' : `（あと${days}日）`;
+  const { dateDisplay, dayLabel } = eventDayInfo(ev);
+  const dayStr = dayLabel ? `（${dayLabel}）` : '';
   document.getElementById('event-meta-display').textContent =
-    `${ev.date || ''}${ev.location ? '　' + ev.location : ''}${dayStr}`;
+    `${dateDisplay}${ev.location ? '　' + ev.location : ''}${dayStr}`;
 }
 
 /* ─── Task tree rendering ─── */
@@ -521,10 +543,11 @@ async function deleteTask(id) {
 }
 
 function openEditEventModal() {
-  document.getElementById('edit-event-name').value     = currentEventData.name     || '';
-  document.getElementById('edit-event-date').value     = currentEventData.date     || '';
-  document.getElementById('edit-event-location').value = currentEventData.location || '';
-  document.getElementById('edit-event-notes').value    = currentEventData.notes    || '';
+  document.getElementById('edit-event-name').value          = currentEventData.name      || '';
+  document.getElementById('edit-event-start-date').value    = currentEventData.startDate || currentEventData.date || '';
+  document.getElementById('edit-event-end-date').value      = currentEventData.endDate   || '';
+  document.getElementById('edit-event-location').value      = currentEventData.location  || '';
+  document.getElementById('edit-event-notes').value         = currentEventData.notes     || '';
   document.getElementById('edit-event-modal').classList.add('open');
 }
 
