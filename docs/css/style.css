@@ -254,6 +254,21 @@ tr:nth-child(even) td { background: #F8FAFC; }
 .task-parent-label { font-size: 12px; color: var(--text-muted); background: var(--bg); border-radius: 4px; padding: 5px 10px; margin-bottom: 12px; min-height: 0; }
 .task-parent-label:empty { display: none; }
 
+/* ─── 予約管理 ─── */
+.reservation-section { margin-top: 28px; }
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.section-head .section-title { margin-bottom: 0; }
+.btn-nav--accent { color: var(--accent); border-color: #BFDBFE; font-weight: 600; }
+.btn-nav--accent:hover { background: #EFF6FF; }
+
+.resv-summary { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.resv-chip { font-size: 12px; font-weight: 600; color: var(--text-light); background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; }
+.resv-chip--accent { color: var(--accent); border-color: #BFDBFE; background: #EFF6FF; }
+
+.resv-card { padding: 0; overflow-x: auto; }
+.resv-card table { min-width: 560px; }
+.resv-badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; background: #EEF2FF; color: #4338CA; }
+
 /* ─── RESPONSIVE ─── */
 @media (max-width: 600px) {
   .hamburger { display: flex; }

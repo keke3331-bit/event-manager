@@ -74,6 +74,30 @@
   <!-- タスクツリー -->
   <div id="task-tree" class="task-tree"></div>
 
+  <!-- 予約管理 -->
+  <section class="reservation-section">
+    <div class="section-head">
+      <h2 class="section-title">予約管理</h2>
+      <button class="btn-nav btn-nav--accent" id="btn-new-reservation">+ 予約を追加</button>
+    </div>
+    <div class="resv-summary" id="resv-summary"></div>
+    <div class="card table-wrap resv-card">
+      <table>
+        <thead>
+          <tr>
+            <th>担当プランナー</th>
+            <th>会員番号</th>
+            <th>名前</th>
+            <th>参加人数</th>
+            <th>見込みAsset</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="reservation-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
 </main>
 
 <button class="fab" id="fab-new-task">+ タスクの追加</button>
@@ -186,6 +210,49 @@
       <div class="btn-group">
         <button type="submit" class="btn btn-primary">保存</button>
         <button type="button" id="edit-event-modal-cancel" class="btn btn-secondary">キャンセル</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 予約 追加/編集モーダル -->
+<div class="modal-overlay" id="reservation-modal">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="reservation-modal-title">予約を追加</h2>
+      <button class="modal__close" id="reservation-modal-close">×</button>
+    </div>
+    <form id="reservation-form">
+      <input type="hidden" id="reservation-edit-id">
+      <div class="form-group">
+        <label for="resv-planner">担当プランナー <span class="required">*</span></label>
+        <select id="resv-planner" required>
+          <option value="">選択してください</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="resv-member">会員番号 <span class="required">*</span> <span class="label-note">（8桁の数字）</span></label>
+          <input type="text" id="resv-member" inputmode="numeric" maxlength="8" placeholder="例：12345678" required>
+        </div>
+        <div class="form-group">
+          <label for="resv-party">参加人数 <span class="required">*</span></label>
+          <select id="resv-party" required>
+            <option value="">選択</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="resv-name">名前 <span class="required">*</span> <span class="label-note">（カタカナ）</span></label>
+        <input type="text" id="resv-name" placeholder="例：ヤマダ タロウ" required>
+      </div>
+      <div class="form-group">
+        <label for="resv-asset">見込みAsset</label>
+        <textarea id="resv-asset" rows="3" placeholder="自由記述"></textarea>
+      </div>
+      <div class="btn-group">
+        <button type="submit" class="btn btn-primary">保存</button>
+        <button type="button" id="reservation-modal-cancel" class="btn btn-secondary">キャンセル</button>
       </div>
     </form>
   </div>

@@ -26,6 +26,10 @@ const CATEGORY_COLOR = {
 
 const STATUS_LIST = ['未着手', '進行中', '完了'];
 
+/* 予約バリデーション：会員番号=8桁数字、名前=カタカナ（長音・中黒・スペース可） */
+const MEMBER_NO_RE = /^\d{8}$/;
+const KATAKANA_RE  = /^[ァ-ヶー・　\s]+$/;
+
 /* ─── Helpers ─── */
 function toISO(date) {
   const y = date.getFullYear();
@@ -82,8 +86,9 @@ function initHamburger() {
 /* ════════════════════════════════════
    ダッシュボード (index.html)
 ════════════════════════════════════ */
-let cachedEvents = {};
-let cachedTasks  = {};
+let cachedEvents       = {};
+let cachedTasks        = {};
+let cachedReservations = {};
 
 function initDashboard() {
   if (!document.getElementById('event-grid')) return;
@@ -95,6 +100,11 @@ function initDashboard() {
 
   onValue(ref(db, 'event_data/tasks'), snap => {
     cachedTasks = snap.val() || {};
+    renderDashboard();
+  });
+
+  onValue(ref(db, 'event_data/reservations'), snap => {
+    cachedReservations = snap.val() || {};
     renderDashboard();
   });
 
@@ -167,6 +177,7 @@ function renderDashboard() {
       ? Math.round(eventRoots.reduce((s, r) => s + calcProgress(r), 0) / eventRoots.length)
       : 0;
     const overdueN  = tasks.filter(t => t.status !== '完了' && t.dueDate && t.dueDate < today).length;
+    const resvN     = Object.values(cachedReservations).filter(r => r.eventId === ev.id).length;
     const { dateDisplay, dayLabel, dayClass } = eventDayInfo(ev);
 
     return `
@@ -194,6 +205,7 @@ function renderDashboard() {
         </div>
         <div class="event-card__footer">
           <span class="day-badge ${dayClass}">${dayLabel}</span>
+          ${resvN > 0 ? `<span class="resv-badge">予約 ${resvN}件</span>` : ''}
           ${overdueN > 0 ? `<span class="overdue-badge">⚠ 期限超過 ${overdueN}件</span>` : ''}
         </div>
       </div>`;
@@ -235,6 +247,8 @@ async function deleteEvent(id) {
     await remove(ref(db, `event_data/events/${id}`));
     const related = Object.entries(cachedTasks).filter(([, t]) => t.eventId === id);
     await Promise.all(related.map(([tid]) => remove(ref(db, `event_data/tasks/${tid}`))));
+    const relatedResv = Object.entries(cachedReservations).filter(([, r]) => r.eventId === id);
+    await Promise.all(relatedResv.map(([rid]) => remove(ref(db, `event_data/reservations/${rid}`))));
     showToast('✅ 削除しました');
   } catch (err) {
     showToast('⚠️ ' + err.message);
@@ -244,9 +258,10 @@ async function deleteEvent(id) {
 /* ════════════════════════════════════
    イベント詳細 (event.html)
 ════════════════════════════════════ */
-let currentEventId   = '';
-let currentEventData = {};
-let cachedEventTasks = {};
+let currentEventId        = '';
+let currentEventData      = {};
+let cachedEventTasks      = {};
+let cachedEventReservations = {};
 
 function initEventDetail() {
   if (!document.getElementById('task-tree')) return;
@@ -266,6 +281,14 @@ function initEventDetail() {
       Object.entries(all).filter(([, t]) => t.eventId === currentEventId)
     );
     renderTasks();
+  });
+
+  onValue(ref(db, 'event_data/reservations'), snap => {
+    const all = snap.val() || {};
+    cachedEventReservations = Object.fromEntries(
+      Object.entries(all).filter(([, r]) => r.eventId === currentEventId)
+    );
+    renderReservations();
   });
 
   const filterAssignee = document.getElementById('filter-assignee');
@@ -335,6 +358,66 @@ function initEventDetail() {
         showToast('✅ タスクを追加しました');
       }
       closeTaskModal();
+    } catch (err) {
+      showToast('⚠️ ' + err.message);
+    }
+  });
+
+  // 予約：プルダウンの初期化
+  const resvPlanner = document.getElementById('resv-planner');
+  if (resvPlanner) {
+    PLANNERS.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = opt.textContent = p;
+      resvPlanner.appendChild(opt);
+    });
+  }
+  const resvParty = document.getElementById('resv-party');
+  if (resvParty) {
+    for (let i = 1; i <= 6; i++) {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `${i}名`;
+      resvParty.appendChild(opt);
+    }
+  }
+  // 会員番号は数字のみ入力可
+  document.getElementById('resv-member')?.addEventListener('input', e => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 8);
+  });
+
+  document.getElementById('btn-new-reservation')?.addEventListener('click', () => openReservationModal());
+  document.getElementById('reservation-modal-close')?.addEventListener('click', closeReservationModal);
+  document.getElementById('reservation-modal-cancel')?.addEventListener('click', closeReservationModal);
+  document.getElementById('reservation-modal')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('reservation-modal')) closeReservationModal();
+  });
+
+  document.getElementById('reservation-form')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const id        = document.getElementById('reservation-edit-id').value;
+    const planner   = document.getElementById('resv-planner').value;
+    const memberNo  = document.getElementById('resv-member').value.trim();
+    const name      = document.getElementById('resv-name').value.trim();
+    const partySize = document.getElementById('resv-party').value;
+    const asset     = document.getElementById('resv-asset').value.trim();
+
+    if (!planner)                    { showToast('⚠️ 担当プランナーを選択してください'); return; }
+    if (!MEMBER_NO_RE.test(memberNo)){ showToast('⚠️ 会員番号は8桁の数字で入力してください'); return; }
+    if (!KATAKANA_RE.test(name))     { showToast('⚠️ 名前はカタカナで入力してください'); return; }
+    if (!partySize)                  { showToast('⚠️ 参加人数を選択してください'); return; }
+
+    const data = { eventId: currentEventId, planner, memberNo, name, partySize: parseInt(partySize), asset };
+    try {
+      if (id) {
+        await update(ref(db, `event_data/reservations/${id}`), data);
+        showToast('✅ 予約を更新しました');
+      } else {
+        data.createdAt = Date.now();
+        await push(ref(db, 'event_data/reservations'), data);
+        showToast('✅ 予約を追加しました');
+      }
+      closeReservationModal();
     } catch (err) {
       showToast('⚠️ ' + err.message);
     }
@@ -616,8 +699,82 @@ async function deleteCurrentEvent() {
     await Promise.all(Object.keys(cachedEventTasks).map(tid =>
       remove(ref(db, `event_data/tasks/${tid}`))
     ));
+    await Promise.all(Object.keys(cachedEventReservations).map(rid =>
+      remove(ref(db, `event_data/reservations/${rid}`))
+    ));
     showToast('✅ 削除しました');
     window.location.href = '../index.html';
+  } catch (err) {
+    showToast('⚠️ ' + err.message);
+  }
+}
+
+/* ─── 予約 (event.html) ─── */
+function renderReservations() {
+  const tbody = document.getElementById('reservation-tbody');
+  if (!tbody) return;
+
+  const list = Object.entries(cachedEventReservations)
+    .map(([id, r]) => ({ id, ...r }))
+    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
+  const summary = document.getElementById('resv-summary');
+  if (summary) {
+    const totalParty = list.reduce((s, r) => s + (parseInt(r.partySize) || 0), 0);
+    summary.innerHTML =
+      `<span class="resv-chip">予約 ${list.length}件</span>` +
+      `<span class="resv-chip resv-chip--accent">参加予定 ${totalParty}名</span>`;
+  }
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align:center;padding:24px">予約がありません。「+ 予約を追加」から登録してください。</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(r => `
+    <tr>
+      <td>${r.planner || '-'}</td>
+      <td>${r.memberNo || '-'}</td>
+      <td>${r.name || '-'}</td>
+      <td>${r.partySize ? r.partySize + '名' : '-'}</td>
+      <td class="notes-cell">${r.asset || '-'}</td>
+      <td>
+        <div class="action-btns">
+          <button class="btn-icon" data-resv-action="edit" data-id="${r.id}" title="編集">✎</button>
+          <button class="btn-icon btn-icon--danger" data-resv-action="delete" data-id="${r.id}" title="削除">×</button>
+        </div>
+      </td>
+    </tr>`).join('');
+
+  tbody.querySelectorAll('[data-resv-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const { resvAction, id } = btn.dataset;
+      if (resvAction === 'edit')   openReservationModal(id, cachedEventReservations[id]);
+      if (resvAction === 'delete') deleteReservation(id);
+    });
+  });
+}
+
+function openReservationModal(id = '', data = {}) {
+  document.getElementById('reservation-edit-id').value = id;
+  document.getElementById('resv-planner').value = data.planner   || '';
+  document.getElementById('resv-member').value  = data.memberNo  || '';
+  document.getElementById('resv-name').value    = data.name      || '';
+  document.getElementById('resv-party').value   = data.partySize || '';
+  document.getElementById('resv-asset').value   = data.asset     || '';
+  document.getElementById('reservation-modal-title').textContent = id ? '予約を編集' : '予約を追加';
+  document.getElementById('reservation-modal').classList.add('open');
+}
+
+function closeReservationModal() {
+  document.getElementById('reservation-modal')?.classList.remove('open');
+}
+
+async function deleteReservation(id) {
+  if (!confirm('この予約を削除しますか？')) return;
+  try {
+    await remove(ref(db, `event_data/reservations/${id}`));
+    showToast('✅ 削除しました');
   } catch (err) {
     showToast('⚠️ ' + err.message);
   }
