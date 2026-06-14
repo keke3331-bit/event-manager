@@ -30,6 +30,14 @@ const STATUS_LIST = ['未着手', '進行中', '完了'];
 const MEMBER_NO_RE = /^\d{8}$/;
 const KATAKANA_RE  = /^[ァ-ヶー・　\s]+$/;
 
+const TRANSPORTS = ['車', '徒歩', '電車', '自転車'];
+const DEVICES    = ['Windows PC', 'Mac', 'iPhone', 'Androidスマホ', 'Apple Watch', 'iPad', 'タブレット'];
+const DEVICE_EMOJI = {
+  'Windows PC': '🖥️', 'Mac': '💻', 'iPhone': '📱', 'Androidスマホ': '🤖',
+  'Apple Watch': '⌚', 'iPad': '📲', 'タブレット': '📋', 'その他': '🔧',
+};
+const TRANSPORT_EMOJI = { '車': '🚗', '徒歩': '🚶', '電車': '🚃', '自転車': '🚲' };
+
 /* ─── Helpers ─── */
 function toISO(date) {
   const y = date.getFullYear();
@@ -381,9 +389,25 @@ function initEventDetail() {
       resvParty.appendChild(opt);
     }
   }
+  const resvTransport = document.getElementById('resv-transport');
+  if (resvTransport) {
+    TRANSPORTS.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = opt.textContent = t;
+      resvTransport.appendChild(opt);
+    });
+  }
+  buildDevicePicker(document.getElementById('resv-owner-devices'));
+  document.getElementById('resv-add-family')?.addEventListener('click', () => addFamilyRow());
   // 会員番号は数字のみ入力可
   document.getElementById('resv-member')?.addEventListener('input', e => {
     e.target.value = e.target.value.replace(/\D/g, '').slice(0, 8);
+  });
+
+  // 相関図モーダル
+  document.getElementById('diagram-modal-close')?.addEventListener('click', closeDiagramModal);
+  document.getElementById('diagram-modal')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('diagram-modal')) closeDiagramModal();
   });
 
   document.getElementById('btn-new-reservation')?.addEventListener('click', () => openReservationModal());
@@ -401,13 +425,37 @@ function initEventDetail() {
     const name      = document.getElementById('resv-name').value.trim();
     const partySize = document.getElementById('resv-party').value;
     const asset     = document.getElementById('resv-asset').value.trim();
+    const transport = document.getElementById('resv-transport').value;
 
     if (!planner)                    { showToast('⚠️ 担当プランナーを選択してください'); return; }
     if (!MEMBER_NO_RE.test(memberNo)){ showToast('⚠️ 会員番号は8桁の数字で入力してください'); return; }
     if (!KATAKANA_RE.test(name))     { showToast('⚠️ 名前はカタカナで入力してください'); return; }
     if (!partySize)                  { showToast('⚠️ 参加人数を選択してください'); return; }
+    if (!transport)                  { showToast('⚠️ 交通手段を選択してください'); return; }
 
-    const data = { eventId: currentEventId, planner, memberNo, name, partySize: parseInt(partySize), asset };
+    const ownerDevices     = getPickedDevices(document.getElementById('resv-owner-devices'));
+    const ownerDeviceOther = document.getElementById('resv-owner-device-other').value.trim();
+
+    // 家族構成を収集（名前カタカナ・年齢必須チェック）
+    const family = [];
+    for (const row of document.querySelectorAll('#resv-family-list .family-member-row')) {
+      const fName = row.querySelector('.family-name').value.trim();
+      const fAge  = row.querySelector('.family-age').value.trim();
+      if (!fName && !fAge) continue;
+      if (!KATAKANA_RE.test(fName)) { showToast('⚠️ 家族の名前はカタカナで入力してください'); return; }
+      if (fAge === '' || isNaN(parseInt(fAge))) { showToast('⚠️ 家族の年齢を入力してください'); return; }
+      family.push({
+        name: fName,
+        age: parseInt(fAge),
+        devices: getPickedDevices(row.querySelector('.device-picker')),
+        deviceOther: row.querySelector('.device-other-input').value.trim(),
+      });
+    }
+
+    const data = {
+      eventId: currentEventId, planner, memberNo, name, partySize: parseInt(partySize), asset,
+      transport, ownerDevices, ownerDeviceOther, family,
+    };
     try {
       if (id) {
         await update(ref(db, `event_data/reservations/${id}`), data);
@@ -727,30 +775,38 @@ function renderReservations() {
   }
 
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align:center;padding:24px">予約がありません。「+ 予約を追加」から登録してください。</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="no-data" style="text-align:center;padding:24px">予約がありません。「+ 予約を追加」から登録してください。</td></tr>';
     return;
   }
 
-  tbody.innerHTML = list.map(r => `
+  tbody.innerHTML = list.map(r => {
+    const famCount = Array.isArray(r.family) ? r.family.length : 0;
+    const transport = r.transport ? `${TRANSPORT_EMOJI[r.transport] || ''} ${r.transport}`.trim() : '-';
+    return `
     <tr>
       <td>${r.planner || '-'}</td>
       <td>${r.memberNo || '-'}</td>
       <td>${r.name || '-'}</td>
       <td>${r.partySize ? r.partySize + '名' : '-'}</td>
+      <td>${transport}</td>
+      <td>${famCount > 0 ? famCount + '名' : '-'}</td>
       <td class="notes-cell">${r.asset || '-'}</td>
       <td>
         <div class="action-btns">
+          <button class="btn-sm btn-sm--edit" data-resv-action="diagram" data-id="${r.id}" title="相関図">相関図</button>
           <button class="btn-icon" data-resv-action="edit" data-id="${r.id}" title="編集">✎</button>
           <button class="btn-icon btn-icon--danger" data-resv-action="delete" data-id="${r.id}" title="削除">×</button>
         </div>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   tbody.querySelectorAll('[data-resv-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       const { resvAction, id } = btn.dataset;
-      if (resvAction === 'edit')   openReservationModal(id, cachedEventReservations[id]);
-      if (resvAction === 'delete') deleteReservation(id);
+      if (resvAction === 'edit')    openReservationModal(id, cachedEventReservations[id]);
+      if (resvAction === 'delete')  deleteReservation(id);
+      if (resvAction === 'diagram') openDiagramModal(id, cachedEventReservations[id]);
     });
   });
 }
@@ -762,8 +818,76 @@ function openReservationModal(id = '', data = {}) {
   document.getElementById('resv-name').value    = data.name      || '';
   document.getElementById('resv-party').value   = data.partySize || '';
   document.getElementById('resv-asset').value   = data.asset     || '';
+  document.getElementById('resv-transport').value = data.transport || '';
+
+  setPickedDevices(document.getElementById('resv-owner-devices'), data.ownerDevices || []);
+  document.getElementById('resv-owner-device-other').value = data.ownerDeviceOther || '';
+
+  const familyList = document.getElementById('resv-family-list');
+  familyList.innerHTML = '';
+  (data.family || []).forEach(m => addFamilyRow(m));
+
   document.getElementById('reservation-modal-title').textContent = id ? '予約を編集' : '予約を追加';
   document.getElementById('reservation-modal').classList.add('open');
+}
+
+/* ─── デバイスピッカー & 家族行 ─── */
+function buildDevicePicker(container) {
+  if (!container) return;
+  container.innerHTML = '';
+  DEVICES.forEach(d => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'device-btn';
+    btn.dataset.device = d;
+    btn.textContent = `${DEVICE_EMOJI[d] || ''} ${d}`.trim();
+    btn.addEventListener('click', () => btn.classList.toggle('selected'));
+    container.appendChild(btn);
+  });
+}
+
+function getPickedDevices(container) {
+  if (!container) return [];
+  return Array.from(container.querySelectorAll('.device-btn.selected')).map(b => b.dataset.device);
+}
+
+function setPickedDevices(container, selected) {
+  if (!container) return;
+  const set = new Set(selected);
+  container.querySelectorAll('.device-btn').forEach(b => {
+    b.classList.toggle('selected', set.has(b.dataset.device));
+  });
+}
+
+function addFamilyRow(data = {}) {
+  const list = document.getElementById('resv-family-list');
+  if (!list) return;
+  const row = document.createElement('div');
+  row.className = 'family-member-row';
+  row.innerHTML = `
+    <div class="family-row-head">
+      <div class="form-row" style="flex:1">
+        <div class="form-group" style="margin-bottom:0">
+          <label>名前 <span class="label-note">（カタカナ）</span></label>
+          <input type="text" class="family-name" placeholder="例：ヤマダ ハナコ">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>年齢</label>
+          <input type="number" class="family-age" min="0" max="120" placeholder="例：8">
+        </div>
+      </div>
+      <button type="button" class="btn-icon btn-icon--danger family-remove" title="削除">×</button>
+    </div>
+    <label class="family-device-label">デバイス <span class="label-note">（複数選択可）</span></label>
+    <div class="device-picker"></div>
+    <input type="text" class="device-other-input" placeholder="その他のデバイス（自由記述）">`;
+  row.querySelector('.family-name').value = data.name || '';
+  row.querySelector('.family-age').value  = (data.age ?? '') === '' ? '' : data.age;
+  row.querySelector('.device-other-input').value = data.deviceOther || '';
+  buildDevicePicker(row.querySelector('.device-picker'));
+  setPickedDevices(row.querySelector('.device-picker'), data.devices || []);
+  row.querySelector('.family-remove').addEventListener('click', () => row.remove());
+  list.appendChild(row);
 }
 
 function closeReservationModal() {
@@ -778,6 +902,76 @@ async function deleteReservation(id) {
   } catch (err) {
     showToast('⚠️ ' + err.message);
   }
+}
+
+/* ─── 予約相関図 ─── */
+function deviceChips(devices = [], other = '') {
+  const chips = (devices || []).map(d => `<span class="dev-chip">${DEVICE_EMOJI[d] || ''} ${d}</span>`);
+  if (other) chips.push(`<span class="dev-chip">${DEVICE_EMOJI['その他']} ${other}</span>`);
+  return chips.length ? `<div class="dev-chips">${chips.join('')}</div>` : '<div class="dev-chips dev-chips--empty">デバイス未登録</div>';
+}
+
+function openDiagramModal(id, data) {
+  if (!data) return;
+  renderDiagram(data);
+  document.getElementById('diagram-modal-title').textContent = `予約相関図｜${data.name || ''}`;
+  document.getElementById('diagram-modal').classList.add('open');
+}
+
+function closeDiagramModal() {
+  document.getElementById('diagram-modal')?.classList.remove('open');
+}
+
+function renderDiagram(r) {
+  const canvas = document.getElementById('diagram-canvas');
+  if (!canvas) return;
+
+  const family = Array.isArray(r.family) ? r.family : [];
+  const W = 560, H = 460, cx = W / 2, cy = H / 2;
+  const n = family.length;
+  const rx = 195, ry = 165;
+
+  // 中心ノード（ご本人）
+  const transport = r.transport ? `${TRANSPORT_EMOJI[r.transport] || ''} ${r.transport}` : '';
+  const centerNode = `
+    <div class="diagram-node diagram-node--center" style="left:${cx}px;top:${cy}px">
+      <div class="dnode-role">ご本人</div>
+      <div class="dnode-name">${r.name || '-'}</div>
+      <div class="dnode-sub">会員 ${r.memberNo || '-'}</div>
+      <div class="dnode-tags">
+        ${r.planner ? `<span class="dnode-tag">👤 ${r.planner}</span>` : ''}
+        ${transport ? `<span class="dnode-tag">${transport}</span>` : ''}
+        ${r.partySize ? `<span class="dnode-tag">👪 ${r.partySize}名</span>` : ''}
+      </div>
+      ${deviceChips(r.ownerDevices, r.ownerDeviceOther)}
+    </div>`;
+
+  // 家族ノード＋接続線
+  let lines = '', nodes = '';
+  family.forEach((m, i) => {
+    const angle = -Math.PI / 2 + (2 * Math.PI * i) / Math.max(n, 1);
+    const x = cx + rx * Math.cos(angle);
+    const y = cy + ry * Math.sin(angle);
+    lines += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" class="diagram-line"></line>`;
+    nodes += `
+      <div class="diagram-node diagram-node--family" style="left:${x}px;top:${y}px">
+        <div class="dnode-name">${m.name || '-'}</div>
+        <div class="dnode-sub">${m.age != null && m.age !== '' ? m.age + '歳' : ''}</div>
+        ${deviceChips(m.devices, m.deviceOther)}
+      </div>`;
+  });
+
+  const emptyMsg = n === 0
+    ? '<div class="diagram-empty">同伴のご家族は登録されていません</div>'
+    : '';
+
+  canvas.innerHTML = `
+    <div class="diagram-stage" style="width:${W}px;height:${H}px">
+      <svg class="diagram-svg" width="${W}" height="${H}">${lines}</svg>
+      ${centerNode}
+      ${nodes}
+    </div>
+    ${emptyMsg}`;
 }
 
 /* ─── Init ─── */

@@ -266,8 +266,47 @@ tr:nth-child(even) td { background: #F8FAFC; }
 .resv-chip--accent { color: var(--accent); border-color: #BFDBFE; background: #EFF6FF; }
 
 .resv-card { padding: 0; overflow-x: auto; }
-.resv-card table { min-width: 560px; }
+.resv-card table { min-width: 720px; }
 .resv-badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; background: #EEF2FF; color: #4338CA; }
+
+/* 幅広モーダル */
+.modal--wide { max-width: 640px; }
+
+/* デバイスピッカー */
+.device-picker { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0 8px; }
+.device-btn { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 4px 11px; font-size: 12px; font-family: inherit; color: var(--text-light); cursor: pointer; transition: all 0.15s; }
+.device-btn:hover { border-color: var(--accent); color: var(--accent); }
+.device-btn.selected { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.device-other-input { width: 100%; border: 1px solid var(--border); border-radius: 5px; padding: 7px 11px; font-size: 13px; font-family: inherit; color: var(--text); background: #fff; }
+.device-other-input:focus { outline: none; border-color: var(--accent); }
+
+/* 家族構成 */
+.family-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.family-head label { margin-bottom: 0; }
+.family-list { display: flex; flex-direction: column; gap: 12px; }
+.family-member-row { border: 1px solid var(--border); border-radius: 6px; padding: 12px; background: #FAFBFD; }
+.family-row-head { display: flex; align-items: flex-start; gap: 8px; }
+.family-row-head .form-row { flex: 1; }
+.family-remove { flex-shrink: 0; margin-top: 22px; }
+.family-device-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-light); margin-top: 10px; }
+
+/* 相関図 */
+.diagram-wrap { overflow: auto; padding: 4px 0; }
+.diagram-stage { position: relative; margin: 0 auto; }
+.diagram-svg { position: absolute; inset: 0; pointer-events: none; }
+.diagram-line { stroke: #CBD5E1; stroke-width: 2; }
+.diagram-node { position: absolute; transform: translate(-50%, -50%); width: 150px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 9px 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }
+.diagram-node--center { width: 180px; border: 2px solid var(--accent); background: #F8FAFF; z-index: 2; }
+.diagram-node--family { z-index: 1; }
+.dnode-role { font-size: 10px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; }
+.dnode-name { font-size: 14px; font-weight: 700; word-break: break-all; }
+.dnode-sub { font-size: 11px; color: var(--text-muted); }
+.dnode-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin: 5px 0; }
+.dnode-tag { font-size: 10px; font-weight: 600; color: var(--text-light); background: var(--bg); border-radius: 20px; padding: 2px 8px; }
+.dev-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 6px; }
+.dev-chip { font-size: 10px; font-weight: 600; color: #4338CA; background: #EEF2FF; border-radius: 6px; padding: 2px 6px; }
+.dev-chips--empty { color: var(--text-muted); font-size: 10px; font-style: italic; }
+.diagram-empty { text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 12px; }
 
 /* ─── RESPONSIVE ─── */
 @media (max-width: 600px) {

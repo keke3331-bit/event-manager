@@ -89,6 +89,8 @@
             <th>会員番号</th>
             <th>名前</th>
             <th>参加人数</th>
+            <th>交通手段</th>
+            <th>家族</th>
             <th>見込みAsset</th>
             <th></th>
           </tr>
@@ -217,7 +219,7 @@
 
 <!-- 予約 追加/編集モーダル -->
 <div class="modal-overlay" id="reservation-modal">
-  <div class="modal">
+  <div class="modal modal--wide">
     <div class="modal__header">
       <h2 class="modal__title" id="reservation-modal-title">予約を追加</h2>
       <button class="modal__close" id="reservation-modal-close">×</button>
@@ -250,11 +252,44 @@
         <label for="resv-asset">見込みAsset</label>
         <textarea id="resv-asset" rows="3" placeholder="自由記述"></textarea>
       </div>
+
+      <div class="form-group">
+        <label for="resv-transport">交通手段 <span class="required">*</span></label>
+        <select id="resv-transport" required>
+          <option value="">選択してください</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>ご本人のデバイス <span class="label-note">（複数選択可）</span></label>
+        <div id="resv-owner-devices" class="device-picker"></div>
+        <input type="text" id="resv-owner-device-other" class="device-other-input" placeholder="その他のデバイス（自由記述）">
+      </div>
+
+      <div class="form-group">
+        <div class="family-head">
+          <label>家族構成 <span class="label-note">（同伴のご家族）</span></label>
+          <button type="button" class="btn-nav btn-nav--accent" id="resv-add-family">+ 家族を追加</button>
+        </div>
+        <div id="resv-family-list" class="family-list"></div>
+      </div>
+
       <div class="btn-group">
         <button type="submit" class="btn btn-primary">保存</button>
         <button type="button" id="reservation-modal-cancel" class="btn btn-secondary">キャンセル</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- 予約相関図モーダル -->
+<div class="modal-overlay" id="diagram-modal">
+  <div class="modal modal--wide">
+    <div class="modal__header">
+      <h2 class="modal__title" id="diagram-modal-title">予約相関図</h2>
+      <button class="modal__close" id="diagram-modal-close">×</button>
+    </div>
+    <div id="diagram-canvas" class="diagram-wrap"></div>
   </div>
 </div>
 
